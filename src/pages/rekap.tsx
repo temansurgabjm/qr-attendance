@@ -14,6 +14,7 @@ import {
   Button,
   CircularProgress,
   Box,
+  Chip,
 } from '@mui/material';
 
 interface Participant {
@@ -51,24 +52,16 @@ const RekapPage: React.FC = () => {
   const totalHadir = participants.filter(p => p.hadir).length;
   const totalTidakHadir = totalParticipants - totalHadir;
 
-  const containerStyle = {
-    padding: '20px',
-  };
-
-  const tableContainerStyle = {
-    marginTop: '20px',
-  };
-
   return (
-    <Container style={containerStyle}>
+    <Container style={{ padding: '20px' }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Rekap Data Peserta
       </Typography>
 
-      <Box display="flex" justifyContent="space-around" mb={2}>
-        <Typography>Total Peserta: {totalParticipants}</Typography>
-        <Typography>Hadir: {totalHadir}</Typography>
-        <Typography>Tidak Hadir: {totalTidakHadir}</Typography>
+      <Box display="flex" justifyContent="space-around" mb={3}>
+        <Typography variant="h5" fontWeight="bold">Total Peserta: {totalParticipants}</Typography>
+        <Typography variant="h5" fontWeight="bold" color="green">Hadir: {totalHadir}</Typography>
+        <Typography variant="h5" fontWeight="bold" color="red">Tidak Hadir: {totalTidakHadir}</Typography>
       </Box>
 
       {loading ? (
@@ -76,11 +69,11 @@ const RekapPage: React.FC = () => {
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer component={Paper} style={tableContainerStyle}>
+        <TableContainer component={Paper} style={{ marginTop: '20px', overflowX: 'auto' }}>
           <Table aria-label="simple table">
             <TableHead>
               <TableRow>
-                <TableCell>ID</TableCell>
+                <TableCell>No</TableCell>
                 <TableCell>Nama</TableCell>
                 <TableCell>Sekolah</TableCell>
                 <TableCell>Kelas</TableCell>
@@ -90,18 +83,27 @@ const RekapPage: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {participants.map((row) => (
+              {participants.map((row, index) => (
                 <TableRow key={row.id}>
-                  <TableCell>{row.id}</TableCell>
+                  <TableCell>{index + 1}</TableCell>
                   <TableCell>{row.nama}</TableCell>
                   <TableCell>{row.sekolah}</TableCell>
                   <TableCell>{row.kelas}</TableCell>
-                  <TableCell>{row.noWa}</TableCell>
-                  <TableCell>{row.hadir ? 'Hadir' : 'Belum Hadir'}</TableCell>
+                  <TableCell>
+                    <a href={`https://wa.me/${row.noWa}`} target="_blank" rel="noopener noreferrer">
+                      {row.noWa}
+                    </a>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={row.hadir ? 'Hadir' : 'Belum Hadir'}
+                      color={row.hadir ? 'success' : 'error'}
+                    />
+                  </TableCell>
                   <TableCell>
                     {row.screenshot && (
                       <a href={row.screenshot} target="_blank" rel="noopener noreferrer">
-                        Lihat Gambar
+                        <img src={row.screenshot} alt="Screenshot" width="50" height="50" style={{ borderRadius: '5px' }} />
                       </a>
                     )}
                   </TableCell>
@@ -112,7 +114,7 @@ const RekapPage: React.FC = () => {
         </TableContainer>
       )}
 
-      <Button variant="contained" color="primary" onClick={() => router.push('/')}>
+      <Button variant="contained" color="primary" onClick={() => router.push('/')} style={{ marginTop: '20px' }}>
         Kembali ke Scan QR
       </Button>
     </Container>

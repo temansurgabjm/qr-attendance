@@ -58,45 +58,77 @@ const uploadScreenshotToDrive = async (imageBase64: string): Promise<string | nu
   }
 };
 
-const updateGoogleSheet = async (id: string, screenshotUrl: string): Promise<boolean> => {
+const updateGoogleSheet = async (id: string): Promise<boolean> => {
   try {
     const auth = new JWT({
       email: googleServiceAccountEmail,
-      key: googlePrivateKey,
+      key: googlePrivateKey.replace(/\\n/g, '\n'), // Fix masalah format key
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
 
     const sheets = google.sheets({ version: 'v4', auth });
 
+    // Ambil semua ID dari kolom B (Kode Unik)
     const getValues = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Rekap Peserta!B:B',
+      range: 'Rekap Peserta!B2:B', // Mulai dari B2 untuk menghindari header
     });
 
-    const ids = getValues.data.values?.map((row) => row[0]) || [];
+    const ids = getValues.data.values?.flat() || []; // Ambil semua ID di kolom B
     const rowIndex = ids.indexOf(id);
-    if (rowIndex === -1) return false;
 
-    const now = new Date().toLocaleString('id-ID');
+    if (rowIndex === -1) {
+      console.warn(`ID ${id} tidak ditemukan di Google Sheet.`);
+      return false;
+    }
 
+    const now = new Date().toLocaleString('id-ID', { hour12: false }).replace(',', ''); 
+
+    // Karena data dimulai dari B2, kita perlu menyesuaikan index baris
+    const actualRowIndex = rowIndex + 2; // +2 karena B2 adalah baris pertama dari data
+
+    // Update hanya kolom "Hadir" (G)
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `Rekap Peserta!G${rowIndex + 1}`,
+      range: `Rekap Peserta!G${actualRowIndex}`,
       valueInputOption: 'USER_ENTERED',
       requestBody: { values: [[now]] },
     });
 
-    await sheets.spreadsheets.values.update({
-      spreadsheetId,
-      range: `Rekap Peserta!I${rowIndex + 1}`,
-      valueInputOption: 'USER_ENTERED',
-      requestBody: { values: [[screenshotUrl]] },
-    });
-
+    console.log(`Berhasil update Google Sheet untuk ID ${id}`);
     return true;
   } catch (error) {
     console.error('Error updating Google Sheet:', error);
     return false;
+  }
+};
+
+const getParticipantData = async (id: string): Promise<{ nama: string; kelas: string } | null> => {
+  try {
+    const auth = new JWT({
+      email: googleServiceAccountEmail,
+      key: googlePrivateKey.replace(/\\n/g, '\n'),
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    // Ambil semua data dari Google Sheet
+    const getValues = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'Rekap Peserta!B2:E', // B = ID, C = Nama, D = Sekolah, E = Kelas
+    });
+
+    const rows = getValues.data.values || [];
+
+    // Cari baris dengan ID yang sesuai
+    const row = rows.find((row) => row[0] === id);
+    if (!row) return null;
+
+    return { nama: row[1], kelas: row[3] }; // Nama ada di C, Kelas ada di E
+  } catch (error) {
+    console.error('Error fetching participant data:', error);
+    return null;
   }
 };
 
@@ -105,25 +137,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { id, screenshot } = req.body;
-
-  if (!id || !screenshot) {
-    return res.status(400).json({ success: false, message: 'ID and screenshot are required' });
+  const { id } = req.body;
+  if (!id) {
+    return res.status(400).json({ success: false, message: 'ID is required' });
   }
 
   try {
-    const screenshotUrl = await uploadScreenshotToDrive(screenshot);
-    if (!screenshotUrl) {
-      return res.status(500).json({ success: false, message: 'Failed to upload screenshot' });
-    }
-
-    const isUpdated = await updateGoogleSheet(id, screenshotUrl);
-
-    if (isUpdated) {
-      return res.status(200).json({ success: true, message: 'Check-in successful' });
-    } else {
+    const participant = await getParticipantData(id);
+    if (!participant) {
       return res.status(404).json({ success: false, message: 'ID not found' });
     }
+
+    const isUpdated = await updateGoogleSheet(id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Check-in successful',
+      nama: participant.nama,
+      kelas: participant.kelas,
+    });
   } catch (error) {
     console.error('Error during check-in process:', error);
     return res.status(500).json({ success: false, message: 'Internal server error' });
