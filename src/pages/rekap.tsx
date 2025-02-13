@@ -88,7 +88,7 @@ const RekapPage: React.FC = () => {
                 <TableCell>Kelas</TableCell>
                 <TableCell>No WA</TableCell>
                 <TableCell>Hadir</TableCell>
-                <TableCell>Screenshot</TableCell>
+                <TableCell>QR Code</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
