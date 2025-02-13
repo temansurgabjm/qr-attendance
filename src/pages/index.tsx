@@ -40,8 +40,8 @@ const IndexPage: React.FC = () => {
           id: result?.text,
         });
         if (response.data.success) {
-          setNama(response.data.nama); // Simpan nama
-          setKelas(response.data.kelas); // Simpan kelas
+          setNama(response.data.nama);
+          setKelas(response.data.kelas);
           setDialogMessage(response.data.message);
           setDialogType("success");
         } else {
@@ -102,7 +102,17 @@ const IndexPage: React.FC = () => {
             overflow: "hidden",
           }}
         >
-          <QrScanner delay={300} onError={handleError} onScan={handleScan} style={{ width: "100%" }} />
+          <QrScanner
+            delay={300}
+            onError={handleError}
+            onScan={handleScan}
+            style={{ width: "100%" }}
+            constraints={{
+              video: {
+                facingMode: "environment", // Gunakan kamera belakang
+              },
+            }}
+          />
         </Box>
       )}
 
@@ -154,7 +164,6 @@ const IndexPage: React.FC = () => {
             <>
               <Typography>{dialogMessage}</Typography>
 
-              {/* Tampilkan Nama & Kelas jika berhasil */}
               {dialogType === "success" && (
                 <Box mt={2}>
                   <Typography>
