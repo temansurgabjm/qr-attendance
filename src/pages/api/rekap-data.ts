@@ -34,10 +34,7 @@ export async function getAttendanceData() {
 
 import type { NextApiRequest, NextApiResponse } from "next";
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
     const data = await getAttendanceData();
     res.status(200).json(data);

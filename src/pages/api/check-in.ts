@@ -11,9 +11,7 @@ const googleDriveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
 const generateRandomFilename = () => `${uuidv4()}.png`;
 
-const uploadScreenshotToDrive = async (
-  imageBase64: string
-): Promise<string | null> => {
+const uploadScreenshotToDrive = async (imageBase64: string): Promise<string | null> => {
   try {
     const auth = new JWT({
       email: googleServiceAccountEmail,
@@ -84,9 +82,7 @@ const updateGoogleSheet = async (id: string): Promise<boolean> => {
       return false;
     }
 
-    const now = new Date()
-      .toLocaleString("id-ID", { hour12: false })
-      .replace(",", "");
+    const now = new Date().toLocaleString("id-ID", { hour12: false }).replace(",", "");
 
     // Karena data dimulai dari B2, kita perlu menyesuaikan index baris
     const actualRowIndex = rowIndex + 2; // +2 karena B2 adalah baris pertama dari data
@@ -107,9 +103,7 @@ const updateGoogleSheet = async (id: string): Promise<boolean> => {
   }
 };
 
-const getParticipantData = async (
-  id: string
-): Promise<{ nama: string; kelas: string } | null> => {
+const getParticipantData = async (id: string): Promise<{ nama: string; kelas: string } | null> => {
   try {
     const auth = new JWT({
       email: googleServiceAccountEmail,
@@ -138,10 +132,7 @@ const getParticipantData = async (
   }
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
@@ -167,8 +158,6 @@ export default async function handler(
     });
   } catch (error) {
     console.error("Error during check-in process:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Internal server error" });
+    return res.status(500).json({ success: false, message: "Internal server error" });
   }
 }
