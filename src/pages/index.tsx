@@ -5,6 +5,7 @@ import { useRouter } from "next/router";
 import axios from "axios";
 import { Container, Typography, Button, Dialog, DialogTitle, DialogContent, CircularProgress, Box, IconButton } from "@mui/material";
 import { Close } from "@mui/icons-material";
+import { useEffect } from "react";
 
 const QrScanner = dynamic(() => import("react-qr-scanner"), {
   ssr: false,
@@ -29,6 +30,19 @@ const IndexPage: React.FC = () => {
     setSekolah("");
   };
 
+  const [confirmCheckIn, setConfirmCheckIn] = useState(false);
+
+  // Tambahkan useEffect untuk menutup dialog otomatis jika tipe "success"
+  useEffect(() => {
+    if (openDialog && dialogType === "success") {
+      const timer = setTimeout(() => {
+        setOpenDialog(false);
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [openDialog, dialogType]);
+
   const handleScan = async (result: any) => {
     if (result && !scanningRef.current) {
       scanningRef.current = true;
@@ -40,28 +54,36 @@ const IndexPage: React.FC = () => {
       try {
         const response = await axios.post("/api/check-in", {
           id: result?.text,
+          confirm: confirmCheckIn, // Kirim konfirmasi jika sudah disetujui
         });
+
+        if (response.data.alreadyCheckedIn && !confirmCheckIn) {
+          setDialogMessage(response.data.message);
+          setDialogType("info");
+          setConfirmCheckIn(true);
+          setLoading(false);
+          return; // Jangan lanjutkan check-in sebelum konfirmasi
+        }
+
         if (response.data.success) {
           setNama(response.data.nama);
           setKelas(response.data.kelas);
           setSekolah(response.data.sekolah);
           setDialogMessage(response.data.message);
           setDialogType("success");
+          setConfirmCheckIn(false); // Reset konfirmasi
         } else {
           resetData();
-          setDialogMessage(response.data.message || "Maaf, QR Code ini tidak dikenali. Pastikan Anda menggunakan QR Code yang benar.");
+          setDialogMessage(response.data.message);
           setDialogType("error");
         }
       } catch (error: any) {
         resetData();
         console.error("Error during check-in:", error);
-        setDialogMessage("Terjadi kesalahan saat memproses check-in. Silakan coba lagi atau hubungi panitia.");
+        setDialogMessage("Terjadi kesalahan saat memproses check-in. Silakan coba lagi.");
         setDialogType("error");
       } finally {
         setLoading(false);
-        setTimeout(() => {
-          setOpenDialog(false);
-        }, 3000);
       }
     }
   };
@@ -76,6 +98,40 @@ const IndexPage: React.FC = () => {
     setScanResult(null);
     scanningRef.current = false;
     setScanning(true);
+  };
+
+  const handleConfirmCheckIn = async () => {
+    setLoading(true);
+    setDialogMessage("Memproses check-in...");
+
+    try {
+      const response = await axios.post("/api/check-in", {
+        id: scanResult,
+        confirm: true, // Kirim konfirmasi check-in
+      });
+
+      if (response.data.success) {
+        setNama(response.data.nama);
+        setKelas(response.data.kelas);
+        setSekolah(response.data.sekolah);
+        setDialogMessage(response.data.message);
+        setDialogType("success");
+
+        setTimeout(() => {
+          setOpenDialog(false); // Tutup dialog otomatis setelah sukses
+        }, 3000);
+      } else {
+        setDialogMessage(response.data.message);
+        setDialogType("error");
+      }
+    } catch (error) {
+      console.error("Error saat lanjut check-in:", error);
+      setDialogMessage("Terjadi kesalahan saat check-in. Silakan coba lagi.");
+      setDialogType("error");
+    } finally {
+      setLoading(false);
+      setConfirmCheckIn(false); // Reset konfirmasi setelah selesai
+    }
   };
 
   return (
@@ -146,22 +202,17 @@ const IndexPage: React.FC = () => {
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
         <DialogTitle
           style={{
-            backgroundColor: loading ? "#2196F3" : dialogType === "success" ? "#4CAF50" : "#f44336",
+            backgroundColor: loading ? "#2196F3" : dialogType === "success" ? "#4CAF50" : dialogType === "error" ? "#f44336" : "#FFC107",
             color: "#fff",
           }}
         >
-          {loading ? "Memproses..." : dialogType === "success" ? "Sukses" : "Error"}
+          {loading ? "Memproses..." : dialogType === "success" ? "Sukses" : dialogType === "info" ? "Konfirmasi" : "Error"} {/* Tambahkan kondisi "info" agar tidak langsung "Error" */}
           <IconButton aria-label="close" onClick={() => setOpenDialog(false)} sx={{ position: "absolute", right: 8, top: 8, color: "white" }}>
             <Close style={{ color: "white" }} />
           </IconButton>
         </DialogTitle>
 
-        <DialogContent
-          style={{
-            backgroundColor: loading ? "#2196F3" : dialogType === "success" ? "#4CAF50" : "#f44336",
-            color: "#fff",
-          }}
-        >
+        <DialogContent style={{ backgroundColor: loading ? "#2196F3" : dialogType === "success" ? "#4CAF50" : dialogType === "error" ? "#f44336" : "#FFC107", color: "#fff" }}>
           {loading ? (
             <Box display="flex" justifyContent="center" alignItems="center">
               <CircularProgress />
@@ -175,12 +226,29 @@ const IndexPage: React.FC = () => {
                   <Typography>
                     <strong>Nama:</strong> {nama}
                   </Typography>
-                  <Typography variant="body1">
+                  <Typography>
                     <strong>Sekolah:</strong> {sekolah}
                   </Typography>
                   <Typography>
                     <strong>Kelas:</strong> {kelas}
                   </Typography>
+                </Box>
+              )}
+
+              {dialogType === "info" && confirmCheckIn && (
+                <Box mt={2} display="flex" justifyContent="center">
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleConfirmCheckIn} // Pakai fungsi baru
+                    disabled={loading} // Disable tombol saat loading
+                    style={{ marginRight: "10px" }}
+                  >
+                    {loading ? "Memproses..." : "Ya, lanjutkan check-in"}
+                  </Button>
+                  <Button variant="contained" color="secondary" onClick={() => setOpenDialog(false)} disabled={loading}>
+                    Batal
+                  </Button>
                 </Box>
               )}
             </>

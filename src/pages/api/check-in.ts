@@ -132,12 +132,38 @@ const getParticipantData = async (id: string): Promise<{ nama: string; kelas: st
   }
 };
 
+const checkExistingCheckIn = async (id: string): Promise<boolean> => {
+  try {
+    const auth = new JWT({
+      email: googleServiceAccountEmail,
+      key: googlePrivateKey,
+      scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+    });
+
+    const sheets = google.sheets({ version: "v4", auth });
+
+    const getValues = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: "Rekap Peserta!B2:G", // B = ID, G = Hadir
+    });
+
+    const rows = getValues.data.values || [];
+    const row = rows.find((row) => row[0] === id);
+    if (!row) return false;
+
+    return row[5] !== undefined && row[5] !== ""; // Cek apakah kolom Hadir (G) sudah terisi
+  } catch (error) {
+    console.error("Error checking existing check-in:", error);
+    return false;
+  }
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method Not Allowed" });
   }
 
-  const { id } = req.body;
+  const { id, confirm } = req.body;
   if (!id) {
     return res.status(400).json({ success: false, message: "ID is required" });
   }
@@ -148,11 +174,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(404).json({ success: false, message: "ID not found" });
     }
 
+    const alreadyCheckedIn = await checkExistingCheckIn(id);
+    if (alreadyCheckedIn && !confirm) {
+      return res.status(200).json({
+        success: false,
+        message: "Peserta ini sudah check-in sebelumnya. Apakah Anda yakin ingin check-in lagi?",
+        alreadyCheckedIn: true,
+      });
+    }
+
     const isUpdated = await updateGoogleSheet(id);
 
     return res.status(200).json({
       success: true,
-      message: "Check-in successful",
+      message: "Check-in berhasil",
       nama: participant.nama,
       sekolah: participant.sekolah,
       kelas: participant.kelas,
