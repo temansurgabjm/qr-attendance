@@ -21,10 +21,12 @@ const IndexPage: React.FC = () => {
   const scanningRef = useRef(false);
   const [nama, setNama] = useState("");
   const [kelas, setKelas] = useState("");
+  const [sekolah, setSekolah] = useState("");
 
   const resetData = () => {
     setNama("");
     setKelas("");
+    setSekolah("");
   };
 
   const handleScan = async (result: any) => {
@@ -42,6 +44,7 @@ const IndexPage: React.FC = () => {
         if (response.data.success) {
           setNama(response.data.nama);
           setKelas(response.data.kelas);
+          setSekolah(response.data.sekolah);
           setDialogMessage(response.data.message);
           setDialogType("success");
         } else {
@@ -116,10 +119,13 @@ const IndexPage: React.FC = () => {
         </Box>
       )}
 
-      {nama && kelas && (
+      {nama && kelas && sekolah && (
         <Box mt={2}>
           <Typography variant="body1">
             <strong>Nama:</strong> {nama}
+          </Typography>
+          <Typography variant="body1">
+            <strong>Sekolah:</strong> {sekolah}
           </Typography>
           <Typography variant="body1">
             <strong>Kelas:</strong> {kelas}
@@ -168,6 +174,9 @@ const IndexPage: React.FC = () => {
                 <Box mt={2}>
                   <Typography>
                     <strong>Nama:</strong> {nama}
+                  </Typography>
+                  <Typography variant="body1">
+                    <strong>Sekolah:</strong> {sekolah}
                   </Typography>
                   <Typography>
                     <strong>Kelas:</strong> {kelas}

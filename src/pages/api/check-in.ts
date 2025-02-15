@@ -103,7 +103,7 @@ const updateGoogleSheet = async (id: string): Promise<boolean> => {
   }
 };
 
-const getParticipantData = async (id: string): Promise<{ nama: string; kelas: string } | null> => {
+const getParticipantData = async (id: string): Promise<{ nama: string; kelas: string; sekolah: string } | null> => {
   try {
     const auth = new JWT({
       email: googleServiceAccountEmail,
@@ -125,7 +125,7 @@ const getParticipantData = async (id: string): Promise<{ nama: string; kelas: st
     const row = rows.find((row) => row[0] === id);
     if (!row) return null;
 
-    return { nama: row[1], kelas: row[3] }; // Nama ada di C, Kelas ada di E
+    return { nama: row[1], sekolah: row[2], kelas: row[3] }; // Nama ada di C, Kelas ada di E
   } catch (error) {
     console.error("Error fetching participant data:", error);
     return null;
@@ -154,6 +154,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       success: true,
       message: "Check-in successful",
       nama: participant.nama,
+      sekolah: participant.sekolah,
       kelas: participant.kelas,
     });
   } catch (error) {
