@@ -1,21 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
-import {
-  Container,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Button,
-  CircularProgress,
-  Box,
-  Chip,
-} from "@mui/material";
+import { Container, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, CircularProgress, Box, Chip } from "@mui/material";
+import { Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
 
 interface Participant {
   id: string;
@@ -32,6 +19,13 @@ const RekapPage: React.FC = () => {
   const router = useRouter();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openDialog, setOpenDialog] = useState(false);
+  const [selectedParticipant, setSelectedParticipant] = useState<Participant | null>(null);
+  const [loadingUpdate, setLoadingUpdate] = useState(false);
+  const handleBadgeClick = (participant: Participant) => {
+    setSelectedParticipant(participant);
+    setOpenDialog(true);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,13 +45,33 @@ const RekapPage: React.FC = () => {
   const totalParticipants = participants.length;
   const totalHadir = participants.filter((p) => p.hadir).length;
   const totalTidakHadir = totalParticipants - totalHadir;
+  const updateAttendanceStatus = async (participant: Participant | null) => {
+    if (!participant) return;
+
+    setLoadingUpdate(true); // Aktifkan loading
+
+    try {
+      const response = await axios.post("/api/update-kehadiran", {
+        id: participant.id,
+        hadir: !participant.hadir, // Toggle status hadir
+      });
+
+      if (response.data.success) {
+        setParticipants((prev) => prev.map((p) => (p.id === participant.id ? { ...p, hadir: !p.hadir } : p)));
+      }
+    } catch (error) {
+      console.error("Gagal memperbarui kehadiran:", error);
+    } finally {
+      setLoadingUpdate(false); // Matikan loading
+      setOpenDialog(false); // Tutup dialog
+    }
+  };
 
   return (
     <Container style={{ padding: "20px" }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Rekap Data Peserta
       </Typography>
-
       <Box display="flex" justifyContent="space-around" mb={3}>
         <Typography variant="h5" fontWeight="bold">
           Total Peserta: {totalParticipants}
@@ -69,16 +83,12 @@ const RekapPage: React.FC = () => {
           Tidak Hadir: {totalTidakHadir}
         </Typography>
       </Box>
-
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center">
           <CircularProgress />
         </Box>
       ) : (
-        <TableContainer
-          component={Paper}
-          style={{ marginTop: "20px", overflowX: "auto" }}
-        >
+        <TableContainer component={Paper} style={{ marginTop: "20px", overflowX: "auto" }}>
           <Table aria-label="simple table">
             <TableHead>
               <TableRow>
@@ -99,34 +109,17 @@ const RekapPage: React.FC = () => {
                   <TableCell>{row.sekolah}</TableCell>
                   <TableCell>{row.kelas}</TableCell>
                   <TableCell>
-                    <a
-                      href={`https://wa.me/${row.noWa}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                    <a href={`https://wa.me/${row.noWa}`} target="_blank" rel="noopener noreferrer">
                       {row.noWa}
                     </a>
                   </TableCell>
                   <TableCell>
-                    <Chip
-                      label={row.hadir ? "Hadir" : "Belum Hadir"}
-                      color={row.hadir ? "success" : "error"}
-                    />
+                    <Chip label={row.hadir ? "Hadir" : "Belum Hadir"} color={row.hadir ? "success" : "error"} onClick={() => handleBadgeClick(row)} style={{ cursor: "pointer" }} />
                   </TableCell>
                   <TableCell>
                     {row.screenshot && (
-                      <a
-                        href={row.screenshot}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <img
-                          src={row.screenshot}
-                          alt="Screenshot"
-                          width="50"
-                          height="50"
-                          style={{ borderRadius: "5px" }}
-                        />
+                      <a href={row.screenshot} target="_blank" rel="noopener noreferrer">
+                        <img src={row.screenshot} alt="Screenshot" width="50" height="50" style={{ borderRadius: "5px" }} />
                       </a>
                     )}
                   </TableCell>
@@ -136,13 +129,21 @@ const RekapPage: React.FC = () => {
           </Table>
         </TableContainer>
       )}
-
-      <Button
-        variant="contained"
-        color="primary"
-        onClick={() => router.push("/")}
-        style={{ marginTop: "20px" }}
-      >
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)}>
+        <DialogTitle>Konfirmasi Perubahan</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{selectedParticipant?.hadir ? "Apakah Anda yakin ingin mengubah status menjadi BELUM HADIR?" : "Apakah Anda yakin ingin mengubah status menjadi HADIR?"}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenDialog(false)} color="primary">
+            Batal
+          </Button>
+          <Button onClick={() => updateAttendanceStatus(selectedParticipant)} color="secondary" disabled={loadingUpdate}>
+            {loadingUpdate ? <CircularProgress size={24} /> : "Ubah"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Button variant="contained" color="primary" onClick={() => router.push("/")} style={{ marginTop: "20px" }}>
         Kembali ke Scan QR
       </Button>
     </Container>
