@@ -12,7 +12,7 @@ export async function getAttendanceData() {
   try {
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: "Rekap Peserta!A2:I",
+      range: "Bjb Rekap Peserta!A2:I",
     });
 
     const rows = response.data.values || [];
