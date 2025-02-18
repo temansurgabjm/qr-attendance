@@ -8,6 +8,7 @@ const spreadsheetId = process.env.SPREADSHEET_ID;
 const googleServiceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const googlePrivateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 const googleDriveFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+const tabSheetName = "Bjb Rekap Peserta";
 
 const generateRandomFilename = () => `${uuidv4()}.png`;
 
@@ -71,7 +72,7 @@ const updateGoogleSheet = async (id: string): Promise<boolean> => {
     // Ambil semua ID dari kolom B (Kode Unik)
     const getValues = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "Rekap Peserta!B2:B", // Mulai dari B2 untuk menghindari header
+      range: `${tabSheetName}!B2:B`, // Mulai dari B2 untuk menghindari header
     });
 
     const ids = getValues.data.values?.flat() || []; // Ambil semua ID di kolom B
@@ -90,7 +91,7 @@ const updateGoogleSheet = async (id: string): Promise<boolean> => {
     // Update hanya kolom "Hadir" (G)
     await sheets.spreadsheets.values.update({
       spreadsheetId,
-      range: `Rekap Peserta!G${actualRowIndex}`,
+      range: `${tabSheetName}!G${actualRowIndex}`,
       valueInputOption: "USER_ENTERED",
       requestBody: { values: [[now]] },
     });
@@ -116,7 +117,7 @@ const getParticipantData = async (id: string): Promise<{ nama: string; kelas: st
     // Ambil semua data dari Google Sheet
     const getValues = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "Rekap Peserta!B2:E", // B = ID, C = Nama, D = Sekolah, E = Kelas
+      range: `${tabSheetName}!B2:E`, // B = ID, C = Nama, D = Sekolah, E = Kelas
     });
 
     const rows = getValues.data.values || [];
@@ -144,7 +145,7 @@ const checkExistingCheckIn = async (id: string): Promise<boolean> => {
 
     const getValues = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "Rekap Peserta!B2:G", // B = ID, G = Hadir
+      range: `${tabSheetName}!B2:G`, // B = ID, G = Hadir
     });
 
     const rows = getValues.data.values || [];
